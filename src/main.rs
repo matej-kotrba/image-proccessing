@@ -1,11 +1,15 @@
+use image::FilterType;
+use ::image::Rgba;
+
 mod image;
 
 fn main() {
-    let img = image::Image::new(String::from("hotd.png"));
+    let mut img = image::Image::new("hotd.png");
 
-    match img {
+    match &mut img {
         Some(data) => {
-            data.save(String::from("idk.png"))
+            data.filter(FilterType::MergeWithColor(Rgba([84, 66, 245, 255])));
+            data.save("idk.png")
         },
         None => {},
     }
