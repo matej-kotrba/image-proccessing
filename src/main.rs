@@ -9,6 +9,7 @@ fn main() {
     match &mut img {
         Some(data) => {
             data.filter(FilterType::MergeWithColor(Rgba([84, 66, 245, 255])));
+            data.filter(FilterType::Blur(5));
             data.save("idk.png")
         },
         None => {},

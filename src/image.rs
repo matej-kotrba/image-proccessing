@@ -19,7 +19,8 @@ pub struct Image {
 }
 
 pub enum FilterType {
-  MergeWithColor(Rgba<u8>)
+  MergeWithColor(Rgba<u8>),
+  Blur(u8)
 }
 
 impl Image {
@@ -73,6 +74,36 @@ impl Image {
             ])
           }
         }
+      },
+      FilterType::Blur(value) => {
+        let mut new_pixels: Vec<Vec<Pixel>> = Vec::new();
+
+        for y in 0..self.dimension.1 {
+          new_pixels.push(Vec::new());
+
+          for x in 0..self.dimension.0 {
+            let mut count = 0;
+            let mut new_rgba: Rgba<i32> = Rgba([0, 0, 0, 0]);
+            for py in 0.max((y as i32)-10)..((self.dimension.1 as i32).min((y as i32)+10)) {
+              for px in 0.max((x as i32)-10)..((self.dimension.0 as i32).min((x as i32)+10)) {
+                count += 1;
+                new_rgba.0[0] += self.pixels[py as usize][px as usize].color.0[0] as i32;
+                new_rgba.0[1] += self.pixels[py as usize][px as usize].color.0[1] as i32;
+                new_rgba.0[2] += self.pixels[py as usize][px as usize].color.0[2] as i32;
+                new_rgba.0[3] += self.pixels[py as usize][px as usize].color.0[3] as i32;
+              }
+            }
+            new_rgba.0[0] = new_rgba.0[0] / count;
+            new_rgba.0[1] = new_rgba.0[1] / count;
+            new_rgba.0[2] = new_rgba.0[2] / count;
+            new_rgba.0[3] = new_rgba.0[3] / count;
+
+            new_pixels[y as usize].push(Pixel{
+              color: Rgba([new_rgba.0[0] as u8, new_rgba.0[1] as u8, new_rgba.0[2] as u8, new_rgba.0[3] as u8])
+            });
+          }
+        }
+        self.pixels = new_pixels;
       }
     }
   }
