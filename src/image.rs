@@ -1,3 +1,5 @@
+use std::iter::Filter;
+
 use image::{GenericImage, GenericImageView, Rgb, Rgba};
 use image::io::Reader as ImageReader;
 
@@ -20,7 +22,8 @@ pub struct Image {
 
 pub enum FilterType {
   MergeWithColor(Rgba<u8>),
-  Blur(u8)
+  Blur(u8),
+  Scale(f32)
 }
 
 impl Image {
@@ -84,8 +87,8 @@ impl Image {
           for x in 0..self.dimension.0 {
             let mut count = 0;
             let mut new_rgba: Rgba<i32> = Rgba([0, 0, 0, 0]);
-            for py in 0.max((y as i32)-10)..((self.dimension.1 as i32).min((y as i32)+10)) {
-              for px in 0.max((x as i32)-10)..((self.dimension.0 as i32).min((x as i32)+10)) {
+            for py in 0.max((y as i32)-value as i32)..((self.dimension.1 as i32).min((y as i32)+value as i32)) {
+              for px in 0.max((x as i32)-value as i32)..((self.dimension.0 as i32).min((x as i32)+value as i32)) {
                 count += 1;
                 new_rgba.0[0] += self.pixels[py as usize][px as usize].color.0[0] as i32;
                 new_rgba.0[1] += self.pixels[py as usize][px as usize].color.0[1] as i32;
@@ -103,6 +106,44 @@ impl Image {
             });
           }
         }
+        self.pixels = new_pixels;
+      }
+      ,
+      FilterType::Scale(multiplier) => {
+        let mut new_pixels: Vec<Vec<Pixel>> = Vec::new();
+        for y in 0..(self.dimension.1 as f32 * multiplier) as u32 {
+          new_pixels.push(Vec::new());
+          for _ in 0..(self.dimension.0 as f32 * multiplier) as u32 {
+            new_pixels[y as usize].push(Pixel{color: Rgba([0, 0, 0, 255])});
+          }
+        } 
+        
+        let ratio_x = (self.dimension.0 as f32 - 1.0) / ((self.dimension.0 as f32 * multiplier) - 1.0);
+        let mut ratio_x_sum: f32 = 0.0;
+
+        for (row_idx, row) in new_pixels.iter_mut().enumerate() {
+          for pixel in row {
+            let original_index = (row_idx as f32 / multiplier) as usize;
+            let left_pixel = self.pixels[original_index][ratio_x_sum.floor() as usize].color;
+            let right_pixel = self.pixels[original_index][ratio_x_sum.ceil() as usize].color;
+            let left_ratio = 1.0 - ratio_x_sum % 1.0;
+            let right_ratio = ratio_x_sum % 1.0;
+            let mut new_pixel = Rgba([0, 0, 0, 255]);
+            
+            for i in 0..4 {
+              new_pixel.0[i] = ((left_pixel.0[i] as f32) * left_ratio + (right_pixel.0[i] as f32) * right_ratio) as u8;
+            }
+
+            pixel.color = new_pixel;
+
+            ratio_x_sum += ratio_x;
+          }
+          ratio_x_sum = 0.0;
+        }
+
+        self.dimension.0 = (self.dimension.0 as f32 * multiplier) as u32;
+        self.dimension.1 = (self.dimension.1 as f32 * multiplier) as u32;
+
         self.pixels = new_pixels;
       }
     }
